@@ -23,8 +23,9 @@ def transform_text_to_tensor(text:str)-> torch.Tensor :
      for i,letter in enumerate(converted_text):
          text_tensor[i][letter_to_index(letter)]=1
 
-     text_tensor=text_tensor.unsqueeze(1)
      return text_tensor
 
 if __name__ == "__main__":
-    print(transform_text_to_tensor("ab"))
+    tensor=transform_text_to_tensor("hello world")
+    print(tensor.shape)
+

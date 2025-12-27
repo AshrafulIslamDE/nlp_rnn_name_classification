@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
-x=torch.zeros(3,2,3)
+x=torch.ones(3,3)
 print(x)
-test=nn.Linear(3,2)
+zeros=torch.zeros(3,x.size(1))
+x=torch.cat((x,zeros),dim=1)
+print(x)

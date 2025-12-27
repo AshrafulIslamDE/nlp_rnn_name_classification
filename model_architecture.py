@@ -14,8 +14,8 @@ class HandCraftedRNN(nn.Module):
         self.w_hy=nn.Parameter(torch.randn(hidden_size,num_classes)*0.01)
 
         # bias parameter
-        self.b_y=torch.zeros(hidden_size)
-        self.b_h=torch.zeros(num_classes)
+        self.b_y=torch.zeros(num_classes)
+        self.b_h=torch.zeros(hidden_size)
 
     def forward(self, x):
         # if [[0,0,1,0],[1,0,0,0]] seq_len=2, feature_size=4

@@ -3,16 +3,9 @@ from torch import Tensor
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-
 from config import BATCH_SIZE, INPUT_SIZE, HIDDEN_SIZE, NUM_CLASSES, EPOCHS
 from model_architecture import HandCraftedRNN
 from name_dataset import NameDataset
-from utils import DEVICE
-
-from torch.nn.utils.rnn import pad_sequence
-
-
-
 
 dataset=NameDataset()
 train_set,val_set=torch.utils.data.random_split(dataset,[0.8,0.2])
@@ -26,16 +19,15 @@ def train():
     total_loss=0
     correct=0
     total=0
-    for names,labels in train_loader:
-        labels=labels.to(DEVICE)
+    for name_tensors,label_tensors in train_loader:
         optimizer.zero_grad()
-        predictions:Tensor=model(names)
-        loss=criterion(predictions,labels)
+        predictions:Tensor=model(name_tensors)
+        loss=criterion(predictions,label_tensors)
         loss.backward()
         optimizer.step()
         total_loss+=loss.item()
-        correct+=predictions.argmax(dim=1).eq(labels).sum().item()
-        total+=len(labels.size(0))
+        correct+=predictions.argmax(dim=1).eq(label_tensors).sum().item()
+        total+=name_tensors.size(0)
 
     return total_loss/len(train_loader),correct/total
 
@@ -44,11 +36,10 @@ def validate():
     correct=0
     total=0
     with torch.no_grad():
-        for names,labels in val_loader:
-            labels=labels.to(DEVICE)
-            predictions=model(names)
-            correct += predictions.eq(labels).sum().item()
-            total += len(labels.size(0))
+        for name_tensors,label_tensors in val_loader:
+            predictions=model(name_tensors)
+            correct += predictions.argmax(dim=1).eq(label_tensors).sum().item()
+            total += name_tensors.size(0)
     return correct/total
 
 if __name__=='__main__':
