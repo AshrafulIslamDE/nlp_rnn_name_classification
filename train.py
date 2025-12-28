@@ -3,17 +3,37 @@ from torch import Tensor
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from torch.nn.utils.rnn import pad_sequence
 from config import BATCH_SIZE, INPUT_SIZE, HIDDEN_SIZE, NUM_CLASSES, EPOCHS
 from model_architecture import HandCraftedRNN, BuiltINRnn
 from name_dataset import NameDataset
 
 dataset=NameDataset()
 train_set,val_set=torch.utils.data.random_split(dataset,[0.85,0.15])
-train_loader=DataLoader(train_set,batch_size=BATCH_SIZE,shuffle=True)
-val_loader=DataLoader(val_set,batch_size=BATCH_SIZE,shuffle=True)
-model=BuiltINRnn(input_size=INPUT_SIZE,hidden_size=HIDDEN_SIZE,num_classes=NUM_CLASSES)
-optimizer=optim.Adam(model.parameters())
+
+def dynamic_collate_fn(batch):
+    """
+       batch: List[(Tensor, Tensor, str, str)]
+       """
+    data_tensors, label_tensors, labels, names = zip(*batch)
+
+    # Pad sequences to max length in THIS batch
+    padded_data = pad_sequence(
+        data_tensors,
+        batch_first=True,  # (batch, seq_len, input_size)
+        padding_value=0.0
+    )
+
+    label_tensors = torch.stack(label_tensors)
+
+    return padded_data, label_tensors, labels, names
+
+train_loader=DataLoader(train_set,batch_size=BATCH_SIZE,shuffle=True,collate_fn=dynamic_collate_fn)
+val_loader=DataLoader(val_set,batch_size=BATCH_SIZE,shuffle=True,collate_fn=dynamic_collate_fn)
+model=HandCraftedRNN(input_size=INPUT_SIZE,hidden_size=HIDDEN_SIZE,num_classes=NUM_CLASSES)
+optimizer=optim.SGD(model.parameters())
 criterion=nn.CrossEntropyLoss()
+
 def train():
     model.train()
     total_loss=0

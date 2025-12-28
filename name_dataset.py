@@ -19,7 +19,6 @@ class NameDataset(Dataset):
         self.labels_names = set()
         self.data_tensors:List[Tensor] = []
         self.label_tensors: List[Tensor] = []
-        self.max_length_of_a_name=0
 
 
         for filename in glob.glob(os.path.join(data_dir, "*.txt")):
@@ -33,7 +32,6 @@ class NameDataset(Dataset):
                 self.data.append(name)
                 self.data_tensors.append(data_tensor)
                 self.labels.append(label)
-                self.max_length_of_a_name=max(self.max_length_of_a_name,data_tensor.size(0))
 
 
         label_to_idx = {label: idx for idx, label in enumerate(sorted(self.labels_names))}
@@ -47,11 +45,6 @@ class NameDataset(Dataset):
 
     def __getitem__(self, idx):
         data_tensor:Tensor = self.data_tensors[idx]
-        pad_length=self.max_length_of_a_name-data_tensor.size(0)
-        if pad_length>0:
-            padded_tensor=torch.zeros(pad_length,INPUT_SIZE)
-            data_tensor=torch.cat((data_tensor,padded_tensor),dim=0)
-
         data_tensor=data_tensor.to(DEVICE)
         label_tensor=self.label_tensors[idx].to(DEVICE)
         return   data_tensor,label_tensor,self.labels[idx],self.data[idx]
