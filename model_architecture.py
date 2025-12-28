@@ -31,6 +31,27 @@ class HandCraftedRNN(nn.Module):
         return prediction
 
 
+class BuiltINRnn(nn.Module):
+    def __init__(self, input_size, hidden_size, num_classes):
+        super(BuiltINRnn, self).__init__()
+        self.rnn = nn.RNN(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=1,
+            batch_first=True,
+            nonlinearity="tanh"
+        )
+        self.fc = nn.Linear(hidden_size, num_classes)
+
+    def forward(self, inputs):
+        batch_size = inputs.size(0)
+        h_0 = torch.zeros(self.rnn.num_layers, batch_size, self.rnn.hidden_size, device=inputs.device)
+        out, h_t = self.rnn(inputs, h_0)
+        pred = self.fc(out[:, -1, :])
+        return pred
+
+
+
 
 
 

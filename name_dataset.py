@@ -1,54 +1,63 @@
 import torch
 from torch.utils.data import Dataset
+from torch import Tensor
+from typing import List
 import os
 import glob
 
+
 from config import DATA_DIR, INPUT_SIZE
 from data_processing import transform_text_to_tensor
+from utils import DEVICE
 
 
 class NameDataset(Dataset):
     def __init__(self, data_dir=DATA_DIR):
-        self.data_tensors = []
+        self.data_dir = data_dir
+        self.data = []
         self.labels = []
         self.labels_names = set()
-        self.max_length = 0
+        self.data_tensors:List[Tensor] = []
+        self.label_tensors: List[Tensor] = []
+        self.max_length_of_a_name=0
 
-        # First pass: collect label names
+
         for filename in glob.glob(os.path.join(data_dir, "*.txt")):
-            label = os.path.splitext(os.path.basename(filename))[0]
+            label = os.path.basename(filename)
+            label=os.path.splitext(label)[0]
             self.labels_names.add(label)
-
-        # Label → index mapping
-        self.label_to_idx = {
-            label: idx for idx, label in enumerate(sorted(self.labels_names))
-        }
-
-        # Second pass: load data
-        for filename in glob.glob(os.path.join(data_dir, "*.txt")):
-            label_name = os.path.splitext(os.path.basename(filename))[0]
-            label_idx = self.label_to_idx[label_name]
-
-            lines = open(filename, encoding="utf-8").read().strip().split("\n")
+            # Read whole txt file, remove trailing white space and then split content line by line
+            lines=open(filename,encoding="utf-8").read().strip().split("\n")
             for name in lines:
-                tensor = transform_text_to_tensor(name)
-                self.data_tensors.append(tensor)
-                self.labels.append(label_idx)
-                self.max_length = max(self.max_length, tensor.size(0))
+                data_tensor=transform_text_to_tensor(name)
+                self.data.append(name)
+                self.data_tensors.append(data_tensor)
+                self.labels.append(label)
+                self.max_length_of_a_name=max(self.max_length_of_a_name,data_tensor.size(0))
+
+
+        label_to_idx = {label: idx for idx, label in enumerate(sorted(self.labels_names))}
+        for i,label in enumerate(self.labels):
+            self.label_tensors.append(torch.tensor(label_to_idx[label],dtype=torch.long))
+
+
 
     def __len__(self):
-        return len(self.data_tensors)
+        return len(self.data)
 
     def __getitem__(self, idx):
-        x = self.data_tensors[idx]
-        y = self.labels[idx]  # int
+        data_tensor:Tensor = self.data_tensors[idx]
+        pad_length=self.max_length_of_a_name-data_tensor.size(0)
+        if pad_length>0:
+            padded_tensor=torch.zeros(pad_length,INPUT_SIZE)
+            data_tensor=torch.cat((data_tensor,padded_tensor),dim=0)
 
-        # Padding
-        pad_length = self.max_length - x.size(0)
-        if pad_length > 0:
-            padding = torch.zeros(
-                pad_length, *x.shape[1:], dtype=x.dtype
-            )
-            x = torch.cat((x, padding), dim=0)
+        data_tensor=data_tensor.to(DEVICE)
+        label_tensor=self.label_tensors[idx].to(DEVICE)
+        return   data_tensor,label_tensor,self.labels[idx],self.data[idx]
 
-        return x, y
+if __name__=="__main__":
+    name_dataset=NameDataset()
+    name=name_dataset[101]
+    print(name.data_tensor.shape)
+    print(name.label_tensor.s)
