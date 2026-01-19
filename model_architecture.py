@@ -60,7 +60,32 @@ class BuiltINRnn(nn.Module):
 
 
 
+class BuiltINLSTM(nn.Module):
+    def __init__(self, input_size, hidden_size, num_classes):
+        super().__init__()
+        self.lstm = nn.LSTM(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=1,
+            batch_first=True
+        )
+        self.fc = nn.Linear(hidden_size, num_classes)
 
+    def forward(self, x, lengths):
+        # Pack padded batch
+        packed = nn.utils.rnn.pack_padded_sequence(
+            x,
+            lengths.cpu(),      # REQUIRED: lengths must be on CPU
+            batch_first=True,
+            enforce_sorted=False
+        )
+
+        _, (h_n, c_n) = self.lstm(packed)
+
+        # h_n: (num_layers, batch, hidden_size)
+        last_hidden = h_n[-1]
+
+        return self.fc(last_hidden)
 
 
 

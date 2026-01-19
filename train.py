@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from config import BATCH_SIZE, INPUT_SIZE, HIDDEN_SIZE, NUM_CLASSES, EPOCHS
-from model_architecture import HandCraftedRNN, BuiltINRnn
+from model_architecture import HandCraftedRNN, BuiltINRnn, BuiltINLSTM
 from name_dataset import NameDataset
 from utils import DEVICE
 
@@ -32,8 +32,8 @@ def dynamic_collate_fn(batch):
 
 train_loader=DataLoader(train_set,batch_size=BATCH_SIZE,shuffle=True,collate_fn=dynamic_collate_fn)
 val_loader=DataLoader(val_set,batch_size=BATCH_SIZE,shuffle=True,collate_fn=dynamic_collate_fn)
-model=BuiltINRnn(input_size=INPUT_SIZE,hidden_size=HIDDEN_SIZE,num_classes=NUM_CLASSES)
-optimizer=optim.Adam(model.parameters(),lr=0.0005)
+model=BuiltINLSTM(input_size=INPUT_SIZE,hidden_size=HIDDEN_SIZE,num_classes=NUM_CLASSES)
+optimizer=optim.Adam(model.parameters(),lr=0.001)
 criterion=nn.CrossEntropyLoss()
 
 
@@ -59,7 +59,7 @@ def train():
         correct += predictions.argmax(dim=1).eq(label_tensors).sum().item()
         total += label_tensors.size(0)
 
-    return total_loss / len(train_loader), correct / total
+    return total_loss / len(train_loader), (correct / total)*100
 
 
 def validate():
@@ -77,15 +77,20 @@ def validate():
             correct += predictions.argmax(dim=1).eq(label_tensors).sum().item()
             total += label_tensors.size(0)
 
-    return correct / total
+    return (correct / total)*100
 
 if __name__=='__main__':
     print(len(dataset))
+    max_train_accuracy={"epochs":0,"train_acc":0.0,"val_acc":0.0,"loss":0.0}
+    max_val_accuracy={"epochs":0,"train_acc":0.0,"val_acc":0.0,"loss":0.0}
     for epoch in range(EPOCHS):
         loss,train_accuracy = train()
         val_accuracy=validate()
+        if max_train_accuracy["train_acc"]<train_accuracy:
+            max_train_accuracy={"epochs":epoch,"train_acc":train_accuracy,"val_acc":val_accuracy,"loss":loss}
+        if max_val_accuracy["val_acc"]<val_accuracy:
+            max_val_accuracy={"epochs":epoch,"train_acc":train_accuracy,"val_acc":val_accuracy,"loss":loss}
         print(f"Epoch {epoch+1}/{EPOCHS} | Loss: {loss} |"
-              f"Training Accuracy: {train_accuracy*100:.4f} | Validation accuracy: {val_accuracy*100:.4f}")
-        if val_accuracy>.89:
-            break
+              f"Training Accuracy: {train_accuracy:.4f} | Validation accuracy: {val_accuracy:.4f}")
+    print(max_train_accuracy,max_val_accuracy)
 
